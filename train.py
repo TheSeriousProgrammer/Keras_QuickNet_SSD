@@ -12,10 +12,10 @@ from tensorflow.keras.callbacks import LearningRateScheduler, ReduceLROnPlateau,
 DATASET_DIR = './dataset'
 IMAGE_SIZE = [300, 300]
 BATCH_SIZE = 1
-MODEL_NAME = "QuickNet"#'B0'
+MODEL_NAME = 'B0'
 EPOCHS = 20
-checkpoint_filepath = None # './checkpoints/efficientnetb3_SSD.h5'
-base_lr = 1e-3 if checkpoint_filepath is None else 1e-5
+
+base_lr = 1e-3
 
 train2012 = tfds.load('voc/2012', data_dir=DATASET_DIR, split='train')
 valid2012 = tfds.load('voc/2012', data_dir=DATASET_DIR, split='validation')
@@ -51,13 +51,7 @@ specs = [
 priors = generate_ssd_priors(specs, IMAGE_SIZE[0])
 target_transform = MatchPrior(priors, center_variance, size_variance, iou_threshold)
 
-MODEL_NAME = "QuickNet"#str(input("Enter model name:"))
-
 model = ssd(MODEL_NAME)
-model.summary()
-#keras.utils.plot_model(model,to_file=MODEL_NAME+".png",show_shapes=True)
-
-#input()
 
 # instantiate the datasets
 training_dataset = prepare_dataset(train_data, IMAGE_SIZE, BATCH_SIZE, target_transform, train=True)
@@ -71,23 +65,25 @@ print("Number of Test Batches:", validation_steps)
 
 
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=1, min_lr=1e-5, verbose=1)
-checkpoint = ModelCheckpoint(checkpoint_filepath, monitor='val_loss', save_best_only=True, save_weights_only=True, verbose=1)
+checkpoint = ModelCheckpoint("./checkpoints/trail{epoch}.h5", monitor='val_loss', save_best_only=True, save_weights_only=True, verbose=1)
 
 model.compile(
     optimizer = tf.keras.optimizers.Adam(learning_rate=base_lr),
     loss = multibox_loss
 )
 
-if checkpoint_filepath is not None:
-    print("Continuing Training from", checkpoint_filepath)
-    model.load_weights(checkpoint_filepath)
+load_from_prev_point = True
+
+if load_from_prev_point:
+    print("Continuing Training from prev best")
+    model.load_weights("./checkpoints/efficientnetb0_SSD.h5")
 else:
     print("Training from with only base model pretrained on imagenet")
 
 
-history = model.fit(training_dataset, 
+history = model.fit(training_dataset,
                     validation_data=validation_dataset,
-                    steps_per_epoch=steps_per_epoch, 
+                    steps_per_epoch=steps_per_epoch,
                     validation_steps=validation_steps,
                     epochs=EPOCHS,
-                    callbacks=[reduce_lr,checkpoint]) 
+                    callbacks=[reduce_lr,checkpoint])

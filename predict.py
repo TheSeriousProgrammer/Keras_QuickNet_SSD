@@ -13,8 +13,8 @@ from preprocessing import prepare_for_prediction
 DATASET_DIR = './dataset'
 IMAGE_SIZE = [300, 300]
 BATCH_SIZE = 16
-MODEL_NAME = 'B0'
-checkpoint_filepath = './checkpoints/efficientnetb0_SSD.h5'
+MODEL_NAME = "QuickNet"#"B0"
+checkpoint_filepath = "./QuickNet23.h5"#'./checkpoints/efficientnetb0_SSD.h5'
 INPUT_DIR = './inputs'
 OUTPUT_DIR = './outputs'
 
@@ -47,7 +47,7 @@ dataset = dataset.map(prepare_for_prediction)
 dataset = dataset.batch(BATCH_SIZE)
 
 pred = model.predict(dataset, verbose=1)
-predictions = post_process(pred, target_transform, confidence_threshold=0.4)
+predictions = post_process(pred, target_transform, confidence_threshold=0.2)
 
 # dataset = dataset.unbatch()
 print("Prediction Complete")

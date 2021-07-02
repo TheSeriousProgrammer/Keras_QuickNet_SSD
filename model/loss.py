@@ -6,6 +6,8 @@ def smooth_l1(labels, scores, sigma=1.0):
     abs_diff = tf.abs(diff)
     return tf.where(tf.less(abs_diff, 1/(sigma**2)), 0.5*(sigma*diff)**2, abs_diff-1/(2*sigma**2))
 
+def area_coeff(labels):
+    return 1/(tf.abs((labels[...,2]-labels[...,0])*(labels[...,3]-labels[...,1]))+0.5)
 
 def hard_negative_mining(loss, labels, neg_pos_ratio):
     """
@@ -54,13 +56,20 @@ def multibox_loss(y_true, y_pred, num_classes=21):
     mask = tf.stop_gradient(mask)
     # return mask
     confidence = tf.boolean_mask(confidence, mask)
-    classification_loss = tf.math.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(logits = tf.reshape(confidence, [-1, num_classes]), labels = tf.boolean_mask(labels, mask)))
+    area_factor_masked = tf.boolean_mask(area_coeff(gt_locations),mask)
+    classification_loss = tf.math.reduce_sum(
+            area_factor_masked * tf.nn.sparse_softmax_cross_entropy_with_logits(
+                logits = tf.reshape(
+                    confidence, [-1, num_classes]),
+                labels = tf.boolean_mask(labels, mask)
+            )
+        )
     # return classification_loss
     pos_mask = labels > 0
-    #predicted_locations = tf.reshape(tf.boolean_mask(predicted_locations, pos_mask), [-1, 4])
-    predicted_locations = tf.reshape(predicted_locations,[-1,4])
-    #gt_locations = tf.reshape(tf.boolean_mask(gt_locations, pos_mask), [-1, 4])
-    gt_locations = tf.reshape(gt_locations, [-1, 4])
+    predicted_locations = tf.reshape(tf.boolean_mask(predicted_locations, pos_mask), [-1, 4])
+    #predicted_locations = tf.reshape(predicted_locations,[-1,4])
+    gt_locations = tf.reshape(tf.boolean_mask(gt_locations, pos_mask), [-1, 4])
+    #gt_locations = tf.reshape(gt_locations, [-1, 4])
 
 
     smooth_l1_loss = tf.math.reduce_sum(smooth_l1(scores=predicted_locations,labels=gt_locations))
